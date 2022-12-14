@@ -27,14 +27,20 @@ module rrect(dims, border_radius) {
 
 function addz(xy, z) = concat(xy, [z]);
 
-module tray(
+module base(
     pack_dims,
     pack_border_radius,
     wall_width,
     floor_width,
+    support_width,
+    support_height,
     lip_height,
     chamber_height,
-    rack_rim_width
+    rack_rim_width,
+    first_pill_center,
+    pill_distance,
+    pill_size,
+    num_pills
 ) {
     difference() {
 
@@ -56,6 +62,27 @@ module tray(
             lip_height + fudge
         ], pack_border_radius + tolerance);
 
+        // support holes
+        translate([
+            wall_width,
+            wall_width,
+            floor_width + chamber_height - support_width + fudge,
+        ]) support(
+            [
+                tolerance + pack_dims.x + tolerance,
+                tolerance + pack_dims.y + tolerance
+            ],
+            tolerance + support_width + tolerance,
+            support_height,
+            [
+                first_pill_center.x + tolerance,
+                first_pill_center.y + tolerance
+            ],
+            pill_distance,
+            pill_size,
+            num_pills
+        );
+
         // collection chamber
         translate([
             wall_width + tolerance + rack_rim_width,
@@ -67,6 +94,45 @@ module tray(
             chamber_height + fudge,
         ], pack_border_radius - rack_rim_width);
     }
+}
+
+module support(
+    pack_dims,
+    support_width,
+    support_height,
+    first_pill_center,
+    pill_distance,
+    pill_size,
+    num_pills
+) {
+    for (i = [0:1:num_pills.x - 2]) {
+        translate([
+            first_pill_center.x
+            + pill_distance.x / 2
+            + pill_distance.x * i
+            - support_width / 2,
+            0,
+            0
+        ]) cube([
+            support_width,
+            pack_dims.y,
+            support_height
+        ]);
+    }
+    
+    half_height = (num_pills.y / 2) - 1;
+    translate([
+        0,
+        first_pill_center.y
+        + pill_distance.y / 2
+        + pill_distance.y * half_height
+        - support_width / 2,
+        0
+    ]) cube([
+        pack_dims.x,
+        support_width,
+        support_height
+    ]);
 }
 
 module maiden(
@@ -126,8 +192,6 @@ module maiden(
             }
         }
     }
-
-
 }
 
 module main(
@@ -135,7 +199,9 @@ module main(
     pack_border_radius = 7,
     wall_width = 2,
     floor_width = 2,
-    lip_height = 10,
+    support_width = 4,
+    support_height = 4,
+    lip_height = 20,
     chamber_height = 20,
     rack_rim_width = 4,
     first_pill_center = [9, 12],
@@ -144,8 +210,34 @@ module main(
     num_pills = [3, 6],
     bluntness = 0.3,
     label_indent = 0.5,
-    skip = []
+    skip = [],
 ) {
+
+    // render support to the side
+    translate([
+        2 * (wall_width + pack_dims.x + wall_width + 20),
+        0,
+        0
+    ])
+
+    /*
+    // render support in-place
+    translate([
+        wall_width + tolerance,
+        wall_width + tolerance,
+        floor_width + chamber_height - support_height + fudge,
+    ])
+    */
+
+    support(
+        pack_dims,
+        support_width,
+        support_height,
+        first_pill_center,
+        pill_distance,
+        pill_size,
+        num_pills
+    );
 
     // render maiden in-place
     /*
@@ -177,14 +269,20 @@ module main(
         skip
     );
 
-    tray(
+    base(
         pack_dims,
         pack_border_radius,
         wall_width,
         floor_width,
+        support_width,
+        support_height,
         lip_height,
         chamber_height,
-        rack_rim_width
+        rack_rim_width,
+        first_pill_center,
+        pill_distance,
+        pill_size,
+        num_pills
     );
 }
 
@@ -194,11 +292,13 @@ module algal(test=false) {
         pack_border_radius = 7,
         wall_width = 2,
         floor_width = test ? 0 : 2,
-        lip_height = test ? 4 : 10,
+        support_width = 4,
+        support_height = 4,
+        lip_height = test ? 4 : 20,
         chamber_height = test ? 2 : 20,
-        rack_rim_width = 4,
-        first_pill_center = [9, 12],
-        pill_distance = [23.5, 17],
+        rack_rim_width = 5,
+        first_pill_center = [10, 12],
+        pill_distance = [22.5, 17],
         pill_size = [10, 10, 6],
         num_pills = [3, 6],
         bluntness = 0.3,
@@ -213,6 +313,8 @@ module meb(test=false) {
         pack_border_radius = 5,
         wall_width = 2,
         floor_width = test ? 0 : 2,
+        support_width = 4,
+        support_height = 4,
         lip_height = test ? 4 : 10,
         chamber_height = test ? 2 : 20,
         rack_rim_width = 4,
@@ -228,11 +330,11 @@ module meb(test=false) {
 
 module all() {
     algal();
-    translate([200, 0, 0]) algal(test=true);
+    translate([250, 0, 0]) algal(test=true);
     translate([0, 150, 0]) {
         meb();
-        translate([250, 0, 0]) meb(test=true);
+        translate([400, 0, 0]) meb(test=true);
     }
 }
 
-all();
+algal();
